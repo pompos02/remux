@@ -1,6 +1,7 @@
 # Compiler
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -I./src -MMD -MP
+LDLIBS = -lftxui-component -lftxui-dom -lftxui-screen -lpthread
 # Directories
 SRC_DIR = src
 BUILD_DIR = build
@@ -14,7 +15,7 @@ TARGET = app
 all: $(TARGET)
 # Link
 $(TARGET): $(OBJS)
-	$(CXX) $(OBJS) -o $(TARGET)
+	$(CXX) $(OBJS) -o $(TARGET) $(LDLIBS)
 # Compile
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@

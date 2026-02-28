@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "tmux.h"
 #include "types.h"
+#include "ui.h"
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -9,10 +10,8 @@
 int main() {
 	try {
 		std::vector<Host> hosts = ParseSSHConfig(SSH_CONFIG_PATH);
-
-		printHostTable(hosts);
 		UpdateHostsStatus(hosts);
-		printHostTable(hosts);
+		return RunHostPickerUI(hosts);
 
 	} catch (const std::exception &e) {
 		WriteError("Fatal error: unknown exception\n");
