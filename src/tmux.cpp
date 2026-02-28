@@ -1,4 +1,5 @@
 #include "types.h"
+#include "debug.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -23,6 +24,7 @@ std::vector<std::string> getTmuxSesssions() {
 												(int (*)(FILE *))pclose);
 
 	if (!pipe) {
+		WriteError("popen() failed\n");
 		throw std::runtime_error("popen() failed" + std::string(std::strerror(errno)));
 	}
 

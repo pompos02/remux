@@ -1,47 +1,35 @@
 #include "parser.h"
+#include "debug.h"
 #include "types.h"
+#include <cerrno>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 void printHostTable(const std::vector<Host> &hosts) {
+	const char *WhoIami = "printHostTable";
+	WriteDebug("Entering*%s\n", WhoIami);
 	if (hosts.empty()) {
-		std::cout << "No hosts found." << std::endl;
+		WriteDebug("No hosts found.\n");
 		return;
 	}
 
-	// Define column widths
-	const int aliasWidth = 15;
-	const int hostWidth = 30;
-	const int userWidth = 15;
-	const int activeWidth = 10;
-
-	// Print Header
-	std::cout << std::left << std::setw(aliasWidth) << "ALIAS"
-			  << std::setw(hostWidth) << "HOSTNAME" << std::setw(userWidth)
-			  << "USER" << std::setw(activeWidth) << "ACTIVE"
-			  << std::endl;
-
-	// Print Separator Line
-	std::cout << std::string(aliasWidth + hostWidth + userWidth + activeWidth,
-							 '-')
-			  << std::endl;
-
-	// Print Rows
 	for (const auto &host : hosts) {
-		std::cout << std::left << std::setw(aliasWidth)
-				  << (host.alias.empty() ? "-" : host.alias)
-				  << std::setw(hostWidth) << host.hostname
-				  << std::setw(userWidth) << host.user
-				  << std::setw(activeWidth)
-				  << (host.isActive ? "true" : "false") << std::endl;
+		WriteDebug("Host*[%s][%s][%s][%s]\n",
+				   (host.alias.empty() ? "-" : host.alias.c_str()),
+				   (host.hostname.empty() ? "-" : host.hostname.c_str()),
+				   (host.user.empty() ? "-" : host.user.c_str()),
+				   (host.isActive ? "true" : "false"));
 	}
+	WriteDebug("Exiting*%s\n", WhoIami);
 }
 
 /* Populate the hosts vector */
@@ -95,8 +83,16 @@ std::vector<Host> ParseSSHConfig(const std::string &path) {
 	std::ifstream file(configPath);
 
 	if (!file) {
-		std::cerr << "Failed to open ssh config File\n";
-		exit(1);
+		const int err = errno;
+		std::string msg = "Failed to open up SSH config: " + configPath;
+		if (errno != 0) {
+			if (err != 0) {
+				msg += " (";
+				msg += std::strerror(err);
+				msg += ")";
+			}
+			throw std::runtime_error(msg);
+		}
 	}
 
 	std::vector<Host> hosts;

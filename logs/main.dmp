@@ -1,0 +1,56 @@
+[2026-02-28 17:28:13] [DEBUG] Initial host state:
+[2026-02-28 17:28:13] [DEBUG] Entering*printHostTable
+[2026-02-28 17:28:13] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[false]
+[2026-02-28 17:28:13] [DEBUG] After tmux status refresh:
+[2026-02-28 17:28:13] [DEBUG] Entering*printHostTable
+[2026-02-28 17:28:13] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[true]
+[2026-02-28 17:36:16] [DEBUG] Entering*printHostTable
+[2026-02-28 17:36:16] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[false]
+[2026-02-28 17:36:16] [DEBUG] Exiting*printHostTable
+[2026-02-28 17:36:16] [DEBUG] Entering*printHostTable
+[2026-02-28 17:36:16] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[true]
+[2026-02-28 17:36:16] [DEBUG] Exiting*printHostTable
+[2026-02-28 17:58:01] [DEBUG] Entering*printHostTable
+[2026-02-28 17:58:01] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[false]
+[2026-02-28 17:58:01] [DEBUG] Exiting*printHostTable
+[2026-02-28 17:58:01] [DEBUG] Entering*printHostTable
+[2026-02-28 17:58:01] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[true]
+[2026-02-28 17:58:01] [DEBUG] Exiting*printHostTable
+[2026-02-28 17:58:17] [DEBUG] Entering*printHostTable
+[2026-02-28 17:58:17] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[false]
+[2026-02-28 17:58:17] [DEBUG] Exiting*printHostTable
+[2026-02-28 17:58:17] [DEBUG] Entering*printHostTable
+[2026-02-28 17:58:17] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[true]
+[2026-02-28 17:58:17] [DEBUG] Exiting*printHostTable
+[2026-02-28 18:28:33] [DEBUG] Entering*printHostTable
+[2026-02-28 18:28:33] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[doom] host[100.88.200.111] user[doom] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[epicurus] host[100.118.34.8] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[iphone-15-pro] host[100.66.2.83] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[plato] host[100.99.94.81] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[zeno] host[100.76.164.117] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] Exiting*printHostTable
+[2026-02-28 18:28:33] [DEBUG] Entering*printHostTable
+[2026-02-28 18:28:33] [DEBUG] alias[castello] host[91.98.164.127] user[karavellas] active[true]
+[2026-02-28 18:28:33] [DEBUG] alias[doom] host[100.88.200.111] user[doom] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[epicurus] host[100.118.34.8] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[iphone-15-pro] host[100.66.2.83] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[plato] host[100.99.94.81] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] alias[zeno] host[100.76.164.117] user[karavellas] active[false]
+[2026-02-28 18:28:33] [DEBUG] Exiting*printHostTable
+[2026-02-28 18:29:34] [DEBUG] Entering*printHostTable
+[2026-02-28 18:29:34] [DEBUG] Host*[castello][91.98.164.127][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[doom][100.88.200.111][doom][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[epicurus][100.118.34.8][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[iphone-15-pro][100.66.2.83][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[plato][100.99.94.81][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[zeno][100.76.164.117][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Exiting*printHostTable
+[2026-02-28 18:29:34] [DEBUG] Entering*printHostTable
+[2026-02-28 18:29:34] [DEBUG] Host*[castello][91.98.164.127][karavellas][true]
+[2026-02-28 18:29:34] [DEBUG] Host*[doom][100.88.200.111][doom][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[epicurus][100.118.34.8][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[iphone-15-pro][100.66.2.83][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[plato][100.99.94.81][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Host*[zeno][100.76.164.117][karavellas][false]
+[2026-02-28 18:29:34] [DEBUG] Exiting*printHostTable

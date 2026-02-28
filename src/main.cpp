@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "parser.h"
 #include "tmux.h"
 #include "types.h"
@@ -10,12 +11,13 @@ int main() {
 		std::vector<Host> hosts = ParseSSHConfig(SSH_CONFIG_PATH);
 
 		printHostTable(hosts);
-		// LaunchTmuxSession(hosts[0]);
 		UpdateHostsStatus(hosts);
-		std::cout << std::endl;
 		printHostTable(hosts);
+
 	} catch (const std::exception &e) {
-		std::cerr << "Unhandled exception: " << e.what() << std::endl;
+		WriteError("Fatal error: unknown exception\n");
+		std::cerr << "Unhandled exception: unknown error" << std::endl;
+		return EXIT_FAILURE;
 	}
 
 	return 0;
