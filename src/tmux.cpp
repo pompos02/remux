@@ -45,19 +45,24 @@ std::vector<std::string> getTmuxSesssions() {
 
 void LaunchTmuxSession(const Host &host) {
 	bool isInsideTmux = std::getenv("TMUX") != nullptr;
-	std::string innerCmd = "ssh " + host.alias + "; exec \\$SHELL -l";
 
 	std::string cmd;
 	if (isInsideTmux) {
-		// 1) Check if session exists (has-session)
-		// 2) If it doesn't (||), create it in the background (-d)
-		// 3) Switch the current client to that session (switch-client)
-		cmd = "tmux has-session -t '" + host.alias + "' 2>/dev/null || " +
-			  "tmux new-session -d -s '" + host.alias + "' \"" + innerCmd +
-			  "\"; " + "tmux switch-client -t '" + host.alias + "'";
+		cmd = "if tmux has-session -t '" + host.alias + "' 2>/dev/null; then "
+			  "tmux switch-client -t '" + host.alias + "'; "
+			  "else "
+			  "tmux new-session -d -s '" + host.alias + "' -c \"$HOME\"; "
+			  "tmux send-keys -t '" + host.alias + ":1.1' 'ssh " + host.alias + "' C-m; "
+			  "tmux switch-client -t '" + host.alias + "'; "
+			  "fi";
 	} else {
-		cmd =
-			"tmux new-session -A -s '" + host.alias + "' \"" + innerCmd + "\"";
+		cmd = "if tmux has-session -t '" + host.alias + "' 2>/dev/null; then "
+			  "tmux attach-session -t '" + host.alias + "'; "
+			  "else "
+			  "tmux new-session -d -s '" + host.alias + "' -c \"$HOME\"; "
+			  "tmux send-keys -t '" + host.alias + ":1.1' 'ssh " + host.alias + "' C-m; "
+			  "tmux attach-session -t '" + host.alias + "'; "
+			  "fi";
 	}
 
 	std::system(cmd.c_str());
