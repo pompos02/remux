@@ -1,7 +1,7 @@
 #include "ui.h"
 
-#include "matcher.h"
 #include "functions.h"
+#include "matcher.h"
 #include "tmux.h"
 #include "types.h"
 
@@ -135,7 +135,8 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 	const int trailing_space_count = width - visible_len - 1;
 
 	parts.push_back(text(left));
-	parts.push_back(text(" ") | color(kSearchCursorFg) | bgcolor(kSearchCursorBg));
+	parts.push_back(text(" ") | color(kSearchCursorFg) |
+					bgcolor(kSearchCursorBg));
 	parts.push_back(text(right));
 	if (trailing_space_count > 0) {
 		parts.push_back(text(std::string(trailing_space_count, ' ')));
@@ -176,6 +177,10 @@ void AdjustScrollOffset(int &scroll_offset, int selected, int max_count,
 int RunHostPickerUI(std::vector<Host> &hosts) {
 	std::string query;
 	int input_cursor_position = 0;
+	std::string custom_user;
+	int custom_user_cursor_position = 0;
+	bool prompting_custom_user = false;
+	int custom_user_host_index = -1;
 	int selected = 0;
 	int scroll_offset = 0;
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
@@ -188,14 +193,24 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	input_option.placeholder = "";
 	input_option.cursor_position = &input_cursor_position;
 	input_option.multiline = false;
-	Component input = Input(&query, input_option);
+	Component search_input = Input(&query, input_option);
+
+	InputOption custom_user_input_option;
+	custom_user_input_option.placeholder = "";
+	custom_user_input_option.cursor_position = &custom_user_cursor_position;
+	custom_user_input_option.multiline = false;
+	Component custom_user_input = Input(&custom_user, custom_user_input_option);
+
+	int active_input_tab = 0;
+	Component inputs =
+		Container::Tab({search_input, custom_user_input}, &active_input_tab);
 
 	auto screen = ScreenInteractive::FullscreenAlternateScreen();
 	auto ui_alive = std::make_shared<std::atomic<bool>>(true);
 
 	auto root = CatchEvent(
 		Renderer(
-			input,
+			inputs,
 			[&] {
 				const bool copy_feedback_active =
 					std::chrono::steady_clock::now() < copy_feedback_until;
@@ -253,7 +268,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					if (is_selected) {
 						row = row |
 							  bgcolor(copy_feedback_active ? kCopiedRowBg
-														  : kSelectedRowBg) |
+														   : kSelectedRowBg) |
 							  color(kSelectedRowFg);
 					}
 					rows.push_back(row);
@@ -270,20 +285,53 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					std::max(1, picker_width - 3 -
 									static_cast<int>(result_counter.size()));
 
-				Element picker =
-					vbox({
+				Element picker;
+				if (prompting_custom_user && custom_user_host_index >= 0 &&
+					custom_user_host_index < static_cast<int>(hosts.size())) {
+					const Host &host = hosts[custom_user_host_index];
+					const std::string hostname =
+						host.hostname.empty() ? "-" : host.hostname;
+					const int user_query_width =
+						std::max(1, picker_width - 4 -
+								 static_cast<int>(hostname.size()));
+
+					picker =
+						vbox({
+							hbox({
+								text("> ") | color(kSearchPromptColor),
+								RenderSearchQuery(custom_user,
+												  custom_user_cursor_position,
+												  user_query_width) |
+									color(kUserColor),
+								text("@"),
+								text(hostname) | color(kHostColor),
+							}),
+							vbox({
+								filler(),
+								hcenter(text("Press Enter to connect") | dim),
+								hcenter(text("Esc to cancel") | dim),
+								filler(),
+							}) |
+								size(HEIGHT, EQUAL, kMaxVisibleRows) |
+								borderRounded,
+						}) |
+						size(WIDTH, EQUAL, picker_width) | hcenter;
+				} else {
+					picker =
+						vbox({
 							hbox({
 								text("> ") | color(kSearchPromptColor),
 								RenderSearchQuery(query, input_cursor_position,
-											  search_query_width),
+												  search_query_width),
 								text(" "),
 								text(result_counter) | dim,
 							}),
-						vbox(std::move(rows)) |
-							size(HEIGHT, EQUAL, kMaxVisibleRows) |
-							borderRounded,
-					}) |
-					size(WIDTH, EQUAL, picker_width) | hcenter;
+							vbox(std::move(rows)) |
+								size(HEIGHT, EQUAL, kMaxVisibleRows) |
+								borderRounded,
+						}) |
+						size(WIDTH, EQUAL, picker_width) | hcenter;
+				}
 
 				Element picker_slot = vbox({picker, filler()}) |
 									  size(HEIGHT, EQUAL, max_picker_height);
@@ -301,6 +349,13 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 			}
 
 			if (event == Event::Escape) {
+				if (prompting_custom_user) {
+					prompting_custom_user = false;
+					custom_user_host_index = -1;
+					active_input_tab = 0;
+					return true;
+				}
+
 				query.clear();
 				input_cursor_position = 0;
 				selected = 0;
@@ -325,6 +380,16 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 			}
 
 			if (event == Event::Return) {
+				if (prompting_custom_user) {
+					if (custom_user_host_index >= 0 &&
+						custom_user_host_index < static_cast<int>(hosts.size())) {
+						const Host &host = hosts[custom_user_host_index];
+						LaunchTmuxSessionWithUser(host, custom_user);
+					}
+					screen.Exit();
+					return true;
+				}
+
 				if (!visible_matches.empty()) {
 					const Host &host = hosts[visible_matches[selected].index];
 					LaunchTmuxSession(host);
@@ -333,23 +398,35 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				return true;
 			}
 
+			if (event == Event::CtrlX) {
+				if (!prompting_custom_user && !visible_matches.empty()) {
+					custom_user_host_index = visible_matches[selected].index;
+					custom_user = hosts[custom_user_host_index].user;
+					custom_user_cursor_position =
+						static_cast<int>(custom_user.size());
+					prompting_custom_user = true;
+					active_input_tab = 1;
+				}
+				return true;
+			}
+
 			if (event == Event::CtrlY) {
 				if (!visible_matches.empty()) {
 					const Host &host = hosts[visible_matches[selected].index];
 					CopyIpToClipboard(host);
-					copy_feedback_until =
-						std::chrono::steady_clock::now() +
-						std::chrono::milliseconds(150);
+					copy_feedback_until = std::chrono::steady_clock::now() +
+										  std::chrono::milliseconds(150);
 
 					auto ui_alive_ref = ui_alive;
 					std::thread([&screen, ui_alive_ref] {
-						std::this_thread::sleep_for(std::chrono::milliseconds(150));
+						std::this_thread::sleep_for(
+							std::chrono::milliseconds(150));
 						if (ui_alive_ref->load()) {
 							screen.PostEvent(Event::Custom);
 						}
 					}).detach();
 				}
-				//screen.Exit();
+				// screen.Exit();
 				return true;
 			}
 

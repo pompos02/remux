@@ -1,5 +1,5 @@
-#include "types.h"
 #include "debug.h"
+#include "types.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -25,7 +25,8 @@ std::vector<std::string> getTmuxSesssions() {
 
 	if (!pipe) {
 		WriteError("popen() failed\n");
-		throw std::runtime_error("popen() failed" + std::string(std::strerror(errno)));
+		throw std::runtime_error("popen() failed" +
+								 std::string(std::strerror(errno)));
 	}
 
 	// Read the ouptut line by line
@@ -48,21 +49,74 @@ void LaunchTmuxSession(const Host &host) {
 
 	std::string cmd;
 	if (isInsideTmux) {
-		cmd = "if tmux has-session -t '" + host.alias + "' 2>/dev/null; then "
-			  "tmux switch-client -t '" + host.alias + "'; "
+		cmd = "if tmux has-session -t '" + host.alias +
+			  "' 2>/dev/null; then "
+			  "tmux switch-client -t '" +
+			  host.alias +
+			  "'; "
 			  "else "
-			  "tmux new-session -d -s '" + host.alias + "' -c \"$HOME\"; "
-			  "tmux send-keys -t '" + host.alias + ":1.1' 'ssh " + host.alias + "' C-m; "
-			  "tmux switch-client -t '" + host.alias + "'; "
+			  "tmux new-session -d -s '" +
+			  host.alias +
+			  "' -c \"$HOME\"; "
+			  "tmux send-keys -t '" +
+			  host.alias + ":1.1' 'ssh " + host.alias +
+			  "' C-m; "
+			  "tmux switch-client -t '" +
+			  host.alias +
+			  "'; "
 			  "fi";
 	} else {
-		cmd = "if tmux has-session -t '" + host.alias + "' 2>/dev/null; then "
-			  "tmux attach-session -t '" + host.alias + "'; "
+		cmd = "if tmux has-session -t '" + host.alias +
+			  "' 2>/dev/null; then "
+			  "tmux attach-session -t '" +
+			  host.alias +
+			  "'; "
 			  "else "
-			  "tmux new-session -d -s '" + host.alias + "' -c \"$HOME\"; "
-			  "tmux send-keys -t '" + host.alias + ":1.1' 'ssh " + host.alias + "' C-m; "
-			  "tmux attach-session -t '" + host.alias + "'; "
+			  "tmux new-session -d -s '" +
+			  host.alias +
+			  "' -c \"$HOME\"; "
+			  "tmux send-keys -t '" +
+			  host.alias + ":1.1' 'ssh " + host.alias +
+			  "' C-m; "
+			  "tmux attach-session -t '" +
+			  host.alias +
+			  "'; "
 			  "fi";
+	}
+
+	std::system(cmd.c_str());
+}
+
+void LaunchTmuxSessionWithUser(const Host &host, const std::string &user) {
+	bool isInsideTmux = std::getenv("TMUX") != nullptr;
+
+	std::string cmd;
+	if (isInsideTmux) {
+		cmd = "if tmux has-session -t '" + host.alias +
+			  "' 2>/dev/null; then "
+			  "tmux new-window -t '" +
+			  host.alias + "' -c \"$HOME\" 'ssh " + user + "@" + host.alias +
+			  "'; "
+			  "else "
+			  "tmux new-session -d -s '" +
+			  host.alias + "' -c \"$HOME\" 'ssh " + user + "@" + host.alias +
+			  "'; "
+			  "fi; "
+			  "tmux switch-client -t '" +
+			  host.alias + "'";
+	} else {
+		cmd = "if tmux has-session -t '" + host.alias +
+			  "' 2>/dev/null; then "
+			  "tmux new-window -t '" +
+			  host.alias + "' -c \"$HOME\" 'ssh " + user + "@" + host.alias +
+			  "'; "
+			  "else "
+			  "tmux new-session -d -s '" +
+			  host.alias + "' -c \"$HOME\" 'ssh " + user + "@" + host.alias +
+			  "'; "
+			  "fi";
+
+		cmd += " && tmux attach-session -t '" + host.alias + "'";
 	}
 
 	std::system(cmd.c_str());
