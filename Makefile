@@ -1,6 +1,6 @@
 # Compiler
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17 -I./src -MMD -MP
+CXXFLAGS = -Wall -Wextra -std=c++17 -I./src -MMD -MP -mavx2
 LDLIBS = -lftxui-component -lftxui-dom -lftxui-screen -lpthread
 # Directories
 SRC_DIR = src

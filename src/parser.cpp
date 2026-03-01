@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "tmux.h"
 #include "debug.h"
 #include "types.h"
 #include <cerrno>
@@ -6,7 +7,6 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -130,5 +130,6 @@ std::vector<Host> ParseSSHConfig(const std::string &path) {
 	}
 	// Save the last block
 	populateHosts(hosts, currentAliases, currentFields);
+	UpdateHostsStatus(hosts);
 	return hosts;
 }
