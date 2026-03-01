@@ -249,13 +249,22 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					rows.push_back(hbox({text(" No hosts available ") | dim}));
 				}
 
+				const std::string result_counter =
+					"[" + std::to_string(visible_matches.size()) + "/" +
+					std::to_string(hosts.size()) + "]";
+				const int search_query_width =
+					std::max(1, picker_width - 3 -
+							 static_cast<int>(result_counter.size()));
+
 				Element picker =
 					vbox({
 						hbox({
 							text("> ") | dim,
 							RenderSearchQuery(query, input_cursor_position,
 											  input_option.placeholder(),
-											  picker_width - 2),
+											  search_query_width),
+							text(" "),
+							text(result_counter) | dim,
 						}),
 						vbox(std::move(rows)) | size(HEIGHT, EQUAL, kMaxVisibleRows) |
 							borderRounded,
