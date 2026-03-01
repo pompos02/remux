@@ -99,7 +99,7 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 			placeholder_width - static_cast<int>(placeholder_visible.size());
 
 		Elements parts = {
-			text(" ") | underlined,
+			text("|") | dim,
 			text(placeholder_visible) | dim,
 		};
 		if (trailing_space_count > 0) {
@@ -114,31 +114,23 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 		std::max(0, std::min(safe_cursor - width + 1,
 							 static_cast<int>(query.size())));
 	const int visible_len =
-		std::min(width, static_cast<int>(query.size()) - window_start);
+		std::min(std::max(0, width - 1),
+				 static_cast<int>(query.size()) - window_start);
 	const std::string visible =
 		query.substr(window_start, static_cast<size_t>(visible_len));
 	const int cursor_in_visible = safe_cursor - window_start;
 
 	Elements parts;
-	if (cursor_in_visible >= visible_len) {
-		parts.push_back(text(visible));
-		parts.push_back(text(" ") | underlined);
-		const int trailing_space_count = width - visible_len - 1;
-		if (trailing_space_count > 0) {
-			parts.push_back(text(std::string(trailing_space_count, ' ')));
-		}
-		return hbox(std::move(parts));
-	}
-
-	const std::string left = visible.substr(0, static_cast<size_t>(cursor_in_visible));
-	const std::string cursor_char =
-		visible.substr(static_cast<size_t>(cursor_in_visible), 1);
-	const std::string right = visible.substr(static_cast<size_t>(cursor_in_visible + 1));
-	const int rendered_len = static_cast<int>(visible.size());
-	const int trailing_space_count = width - rendered_len;
+	const int safe_cursor_in_visible =
+		std::max(0, std::min(cursor_in_visible, visible_len));
+	const std::string left =
+		visible.substr(0, static_cast<size_t>(safe_cursor_in_visible));
+	const std::string right =
+		visible.substr(static_cast<size_t>(safe_cursor_in_visible));
+	const int trailing_space_count = width - visible_len - 1;
 
 	parts.push_back(text(left));
-	parts.push_back(text(cursor_char) | underlined);
+	parts.push_back(text("|") | dim);
 	parts.push_back(text(right));
 	if (trailing_space_count > 0) {
 		parts.push_back(text(std::string(trailing_space_count, ' ')));
@@ -165,6 +157,8 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
 	const int alias_column_width = ComputeAliasColumnWidth(hosts);
 	const int picker_width = ComputePickerWidth(hosts, alias_column_width);
+	const int max_list_height = std::max(1, static_cast<int>(hosts.size()));
+	const int max_picker_height = max_list_height + 3;
 
 	InputOption input_option;
 	input_option.placeholder = "Search hosts...";
@@ -230,22 +224,20 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 
 				Element picker =
 					vbox({
-						vbox({
-							hbox({
-								text(" "),
-								RenderSearchQuery(query, input_cursor_position,
-												  input_option.placeholder(),
-												  picker_width - 2),
-								text(" "),
-							}),
-							separator() | dim,
+						hbox({
+							text("> ") | dim,
+							RenderSearchQuery(query, input_cursor_position,
+											  input_option.placeholder(),
+											  picker_width - 2),
 						}),
-						text(""),
 						vbox(std::move(rows)) | borderRounded,
 					}) |
 					size(WIDTH, EQUAL, picker_width) | hcenter;
 
-				return picker | hcenter | vcenter | flex;
+				Element picker_slot = vbox({picker, filler()}) |
+									  size(HEIGHT, EQUAL, max_picker_height);
+
+				return picker_slot | hcenter | vcenter | flex;
 			}),
 		[&](Event event) {
 			if (event == Event::Character('q') || event == Event::CtrlC) {
