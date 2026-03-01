@@ -25,6 +25,7 @@ const Color kUserColor = Color::RGB(197, 188, 164);
 const Color kHostColor = Color::RGB(146, 172, 204);
 const Color kSelectedRowBg = Color::RGB(41, 46, 56);
 constexpr int kAliasIdentityGap = 5;
+constexpr int kMaxVisibleRows = 10;
 
 std::vector<HostMatch> FilterHostMatches(const std::vector<Host> &hosts,
 									 const std::string &query) {
@@ -148,17 +149,35 @@ void ClampSelection(int &selected, int max_count) {
 	selected = std::max(0, std::min(selected, max_count - 1));
 }
 
+void AdjustScrollOffset(int &scroll_offset, int selected, int max_count,
+						int window_size) {
+	if (max_count <= 0 || window_size <= 0 || max_count <= window_size) {
+		scroll_offset = 0;
+		return;
+	}
+
+	const int max_offset = max_count - window_size;
+	scroll_offset = std::max(0, std::min(scroll_offset, max_offset));
+
+	if (selected < scroll_offset) {
+		scroll_offset = selected;
+	}
+	if (selected >= scroll_offset + window_size) {
+		scroll_offset = selected - window_size + 1;
+	}
+}
+
 } // namespace
 
 int RunHostPickerUI(std::vector<Host> &hosts) {
 	std::string query;
 	int input_cursor_position = 0;
 	int selected = 0;
+	int scroll_offset = 0;
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
 	const int alias_column_width = ComputeAliasColumnWidth(hosts);
 	const int picker_width = ComputePickerWidth(hosts, alias_column_width);
-	const int max_list_height = std::max(1, static_cast<int>(hosts.size()));
-	const int max_picker_height = max_list_height + 3;
+	const int max_picker_height = kMaxVisibleRows + 3;
 
 	InputOption input_option;
 	input_option.placeholder = "Search hosts...";
@@ -175,14 +194,22 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				visible_matches = FilterHostMatches(hosts, query);
 				ClampSelection(selected,
 							   static_cast<int>(visible_matches.size()));
+				AdjustScrollOffset(scroll_offset, selected,
+							   static_cast<int>(visible_matches.size()),
+							   kMaxVisibleRows);
 
 				Elements rows;
-				rows.reserve(visible_matches.size());
+				rows.reserve(kMaxVisibleRows);
 
-				for (size_t i = 0; i < visible_matches.size(); ++i) {
-					const HostMatch &match = visible_matches[i];
+				const int window_start = scroll_offset;
+				const int window_end = std::min(
+					window_start + kMaxVisibleRows,
+					static_cast<int>(visible_matches.size()));
+
+				for (int i = window_start; i < window_end; ++i) {
+					const HostMatch &match = visible_matches[static_cast<size_t>(i)];
 					const Host &host = hosts[match.index];
-					const bool is_selected = static_cast<int>(i) == selected;
+					const bool is_selected = i == selected;
 
 					auto indicator =
 						host.isActive
@@ -230,7 +257,8 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 											  input_option.placeholder(),
 											  picker_width - 2),
 						}),
-						vbox(std::move(rows)) | borderRounded,
+						vbox(std::move(rows)) | size(HEIGHT, EQUAL, kMaxVisibleRows) |
+							borderRounded,
 					}) |
 					size(WIDTH, EQUAL, picker_width) | hcenter;
 
@@ -249,6 +277,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				query.clear();
 				input_cursor_position = 0;
 				selected = 0;
+				scroll_offset = 0;
 				return true;
 			}
 
