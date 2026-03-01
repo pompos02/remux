@@ -1,4 +1,4 @@
-# ssh-tui
+# remux
 
 `ssh-tui` is a small terminal UI that helps you jump to SSH hosts defined in `~/.ssh/config`.
 It presents your host aliases in a searchable picker, then opens or switches to a matching tmux session and runs `ssh <alias>`.
