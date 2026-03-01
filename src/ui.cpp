@@ -26,8 +26,30 @@ const Color kHostColor = Color::RGB(146, 172, 204);
 const Color kSelectedRowBg = Color::RGB(41, 46, 56);
 
 std::vector<HostMatch> FilterHostMatches(const std::vector<Host> &hosts,
-										 const std::string &query) {
+									 const std::string &query) {
 	return RankHosts(hosts, query);
+}
+
+int ComputePickerWidth(const std::vector<Host> &hosts) {
+	constexpr int kMinPickerWidth = 72;
+	constexpr int kMaxPickerWidth = 110;
+
+	int max_row_content_width = 0;
+	for (const Host &host : hosts) {
+		const int alias_width =
+			static_cast<int>(host.alias.empty() ? 1 : host.alias.size());
+		const int user_width =
+			static_cast<int>(host.user.empty() ? 1 : host.user.size());
+		const int host_width =
+			static_cast<int>(host.hostname.empty() ? 1 : host.hostname.size());
+
+		const int row_content_width =
+			1 + alias_width + 1 + 2 + user_width + 1 + host_width + 1;
+		max_row_content_width = std::max(max_row_content_width, row_content_width);
+	}
+
+	const int picker_width = max_row_content_width + 2;
+	return std::clamp(picker_width, kMinPickerWidth, kMaxPickerWidth);
 }
 
 Element RenderAliasWithMatches(const std::string &alias,
@@ -52,25 +74,65 @@ Element RenderAliasWithMatches(const std::string &alias,
 }
 
 Element RenderSearchQuery(const std::string &query, int cursor_position,
-						  const std::string &placeholder) {
+						  const std::string &placeholder, int width) {
+	if (width <= 0) {
+		return text("");
+	}
+
 	if (query.empty()) {
-		return hbox({text(" ") | underlined, text(placeholder) | dim});
+		const int placeholder_width = std::max(0, width - 1);
+		const std::string placeholder_visible =
+			placeholder.substr(0, static_cast<size_t>(placeholder_width));
+		const int trailing_space_count =
+			placeholder_width - static_cast<int>(placeholder_visible.size());
+
+		Elements parts = {
+			text(" ") | underlined,
+			text(placeholder_visible) | dim,
+		};
+		if (trailing_space_count > 0) {
+			parts.push_back(text(std::string(trailing_space_count, ' ')));
+		}
+		return hbox(std::move(parts));
 	}
 
 	const int safe_cursor =
 		std::max(0, std::min(cursor_position, static_cast<int>(query.size())));
-	const std::string left = query.substr(0, safe_cursor);
-	const std::string right = query.substr(safe_cursor);
+	const int window_start =
+		std::max(0, std::min(safe_cursor - width + 1,
+							 static_cast<int>(query.size())));
+	const int visible_len =
+		std::min(width, static_cast<int>(query.size()) - window_start);
+	const std::string visible =
+		query.substr(window_start, static_cast<size_t>(visible_len));
+	const int cursor_in_visible = safe_cursor - window_start;
 
-	if (right.empty()) {
-		return hbox({text(left), text(" ") | underlined});
+	Elements parts;
+	if (cursor_in_visible >= visible_len) {
+		parts.push_back(text(visible));
+		parts.push_back(text(" ") | underlined);
+		const int trailing_space_count = width - visible_len - 1;
+		if (trailing_space_count > 0) {
+			parts.push_back(text(std::string(trailing_space_count, ' ')));
+		}
+		return hbox(std::move(parts));
 	}
 
-	return hbox({
-		text(left),
-		text(std::string(1, right.front())) | underlined,
-		text(right.substr(1)),
-	});
+	const std::string left = visible.substr(0, static_cast<size_t>(cursor_in_visible));
+	const std::string cursor_char =
+		visible.substr(static_cast<size_t>(cursor_in_visible), 1);
+	const std::string right = visible.substr(static_cast<size_t>(cursor_in_visible + 1));
+	const int rendered_len = static_cast<int>(visible.size());
+	const int trailing_space_count = width - rendered_len;
+
+	parts.push_back(text(left));
+	parts.push_back(text(cursor_char) | underlined);
+	parts.push_back(text(right));
+	if (trailing_space_count > 0) {
+		parts.push_back(text(std::string(trailing_space_count, ' ')));
+	}
+
+	return hbox(std::move(parts));
 }
 
 void ClampSelection(int &selected, int max_count) {
@@ -89,6 +151,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	int input_cursor_position = 0;
 	int selected = 0;
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
+	const int picker_width = ComputePickerWidth(hosts);
 
 	InputOption input_option;
 	input_option.placeholder = "Search hosts...";
@@ -119,8 +182,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 							? (text("*") | bold | color(kActiveIndicator))
 							: text(" ");
 					auto alias =
-						RenderAliasWithMatches(host.alias, match.positions) |
-						xflex;
+						RenderAliasWithMatches(host.alias, match.positions) | xflex;
 
 					const std::string user =
 						host.user.empty() ? "-" : host.user;
@@ -133,14 +195,14 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 						text(hostname) | color(kHostColor),
 					});
 					Element row = hbox({
-									  text(" "),
-									  alias,
-									  indicator,
-									  text("  "),
-									  identity,
-									  text(" "),
-								  }) |
-								  xflex;
+								  text(" "),
+								  alias,
+								  indicator | size(WIDTH, EQUAL, 1),
+								  text("  "),
+								  identity,
+								  text(" "),
+							  }) |
+							  xflex;
 					if (is_selected) {
 						row = row | bgcolor(kSelectedRowBg);
 					}
@@ -156,10 +218,9 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 						vbox({
 							hbox({
 								text(" "),
-								// text("Search ") | dim,
 								RenderSearchQuery(query, input_cursor_position,
-												  input_option.placeholder()) |
-									xflex,
+												  input_option.placeholder(),
+												  picker_width - 2),
 								text(" "),
 							}),
 							separator() | dim,
@@ -167,7 +228,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 						text(""),
 						vbox(std::move(rows)) | borderRounded,
 					}) |
-					size(WIDTH, LESS_THAN, 96) | hcenter;
+					size(WIDTH, EQUAL, picker_width) | hcenter;
 
 				Element hints = hbox({
 									text("Enter") | dim,
