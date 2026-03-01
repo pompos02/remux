@@ -139,10 +139,6 @@ std::vector<HostMatch> RankHosts(const std::vector<Host> &hosts,
 		for (size_t i = 0; i < hosts.size(); ++i) {
 			ranked.push_back(HostMatch{static_cast<int>(i), 0, {}});
 		}
-		std::sort(ranked.begin(), ranked.end(),
-				  [&](const HostMatch &lhs, const HostMatch &rhs) {
-					  return BetterCandidate(lhs, rhs, hosts);
-				  });
 		return ranked;
 	}
 
