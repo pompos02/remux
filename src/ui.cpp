@@ -24,27 +24,39 @@ const Color kActiveIndicator = Color::RGB(123, 182, 148);
 const Color kUserColor = Color::RGB(197, 188, 164);
 const Color kHostColor = Color::RGB(146, 172, 204);
 const Color kSelectedRowBg = Color::RGB(41, 46, 56);
+constexpr int kAliasIdentityGap = 5;
 
 std::vector<HostMatch> FilterHostMatches(const std::vector<Host> &hosts,
 									 const std::string &query) {
 	return RankHosts(hosts, query);
 }
 
-int ComputePickerWidth(const std::vector<Host> &hosts) {
-	constexpr int kMinPickerWidth = 72;
+int ComputeAliasColumnWidth(const std::vector<Host> &hosts) {
+	int max_alias_column_width = 1;
+	for (const Host &host : hosts) {
+		const int alias_width =
+			static_cast<int>(host.alias.empty() ? 1 : host.alias.size());
+		const int indicator_width = host.isActive ? 1 : 0;
+		max_alias_column_width =
+			std::max(max_alias_column_width, alias_width + indicator_width);
+	}
+	return max_alias_column_width;
+}
+
+int ComputePickerWidth(const std::vector<Host> &hosts, int alias_column_width) {
+	constexpr int kMinPickerWidth = 24;
 	constexpr int kMaxPickerWidth = 110;
 
 	int max_row_content_width = 0;
 	for (const Host &host : hosts) {
-		const int alias_width =
-			static_cast<int>(host.alias.empty() ? 1 : host.alias.size());
 		const int user_width =
 			static_cast<int>(host.user.empty() ? 1 : host.user.size());
 		const int host_width =
 			static_cast<int>(host.hostname.empty() ? 1 : host.hostname.size());
 
 		const int row_content_width =
-			1 + alias_width + 1 + 2 + user_width + 1 + host_width + 1;
+			1 + alias_column_width + kAliasIdentityGap + user_width + 1 +
+			host_width + 1;
 		max_row_content_width = std::max(max_row_content_width, row_content_width);
 	}
 
@@ -151,7 +163,8 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	int input_cursor_position = 0;
 	int selected = 0;
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
-	const int picker_width = ComputePickerWidth(hosts);
+	const int alias_column_width = ComputeAliasColumnWidth(hosts);
+	const int picker_width = ComputePickerWidth(hosts, alias_column_width);
 
 	InputOption input_option;
 	input_option.placeholder = "Search hosts...";
@@ -180,9 +193,12 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					auto indicator =
 						host.isActive
 							? (text("*") | bold | color(kActiveIndicator))
-							: text(" ");
-					auto alias =
-						RenderAliasWithMatches(host.alias, match.positions) | xflex;
+							: text("");
+					auto alias = hbox({
+						RenderAliasWithMatches(host.alias, match.positions),
+						indicator,
+					}) |
+						size(WIDTH, EQUAL, alias_column_width);
 
 					const std::string user =
 						host.user.empty() ? "-" : host.user;
@@ -197,8 +213,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					Element row = hbox({
 								  text(" "),
 								  alias,
-								  indicator | size(WIDTH, EQUAL, 1),
-								  text("  "),
+								  text(std::string(kAliasIdentityGap, ' ')),
 								  identity,
 								  text(" "),
 							  }) |
