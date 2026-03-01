@@ -1,12 +1,17 @@
 #include "ui.h"
 
 #include "matcher.h"
+#include "functions.h"
 #include "tmux.h"
 #include "types.h"
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <ftxui/component/component.hpp>
@@ -26,6 +31,7 @@ const Color kHostColor = Color::RGB(52, 150, 198);
 const Color kSearchPromptColor = Color::RGB(72, 118, 198);
 const Color kSelectedRowBg = Color::RGB(62, 69, 82);
 const Color kSelectedRowFg = Color::RGB(236, 241, 248);
+const Color kCopiedRowBg = Color::RGB(52, 140, 86);
 constexpr int kAliasIdentityGap = 10;
 constexpr int kMaxVisibleRows = 10;
 
@@ -174,6 +180,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	const int alias_column_width = ComputeAliasColumnWidth(hosts);
 	const int picker_width = ComputePickerWidth(hosts, alias_column_width);
 	const int max_picker_height = kMaxVisibleRows + 3;
+	auto copy_feedback_until = std::chrono::steady_clock::time_point::min();
 
 	InputOption input_option;
 	input_option.placeholder = "";
@@ -182,11 +189,15 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	Component input = Input(&query, input_option);
 
 	auto screen = ScreenInteractive::FullscreenAlternateScreen();
+	auto ui_alive = std::make_shared<std::atomic<bool>>(true);
 
 	auto root = CatchEvent(
 		Renderer(
 			input,
 			[&] {
+				const bool copy_feedback_active =
+					std::chrono::steady_clock::now() < copy_feedback_until;
+
 				visible_matches = FilterHostMatches(hosts, query);
 				ClampSelection(selected,
 							   static_cast<int>(visible_matches.size()));
@@ -238,7 +249,10 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 								  }) |
 								  xflex;
 					if (is_selected) {
-						row = row | bgcolor(kSelectedRowBg) | color(kSelectedRowFg);
+						row = row |
+							  bgcolor(copy_feedback_active ? kCopiedRowBg
+														  : kSelectedRowBg) |
+							  color(kSelectedRowFg);
 					}
 					rows.push_back(row);
 				}
@@ -275,6 +289,10 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				return picker_slot | hcenter | vcenter | flex;
 			}),
 		[&](Event event) {
+			if (event == Event::Custom) {
+				return true;
+			}
+
 			if (event == Event::Character('q') || event == Event::CtrlC) {
 				screen.Exit();
 				return true;
@@ -313,9 +331,30 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				return true;
 			}
 
+			if (event == Event::CtrlY) {
+				if (!visible_matches.empty()) {
+					const Host &host = hosts[visible_matches[selected].index];
+					CopyIpToClipboard(host);
+					copy_feedback_until =
+						std::chrono::steady_clock::now() +
+						std::chrono::milliseconds(150);
+
+					auto ui_alive_ref = ui_alive;
+					std::thread([&screen, ui_alive_ref] {
+						std::this_thread::sleep_for(std::chrono::milliseconds(150));
+						if (ui_alive_ref->load()) {
+							screen.PostEvent(Event::Custom);
+						}
+					}).detach();
+				}
+				//screen.Exit();
+				return true;
+			}
+
 			return false;
 		});
 
 	screen.Loop(root);
+	ui_alive->store(false);
 	return 0;
 }
