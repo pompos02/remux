@@ -1,3 +1,4 @@
+#if DEBUG
 #include "debug.h"
 #include <cstdarg>
 #include <cstdio>
@@ -28,7 +29,6 @@ void WriteDebug(const char *fmt, ...) {
 	}
 }
 
-
 void WriteError(const char *fmt, ...) {
 	char message[1024];
 	va_list args;
@@ -52,3 +52,4 @@ void WriteError(const char *fmt, ...) {
 		std::fclose(log_file);
 	}
 }
+#endif
