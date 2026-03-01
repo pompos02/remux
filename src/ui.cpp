@@ -159,7 +159,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	input_option.multiline = false;
 	Component input = Input(&query, input_option);
 
-	auto screen = ScreenInteractive::TerminalOutput();
+	auto screen = ScreenInteractive::FullscreenAlternateScreen();
 
 	auto root = CatchEvent(
 		Renderer(
@@ -230,24 +230,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					}) |
 					size(WIDTH, EQUAL, picker_width) | hcenter;
 
-				Element hints = hbox({
-									text("Enter") | dim,
-									text(": connect   "),
-									text("Up/Down") | dim,
-									text(": navigate   "),
-									text("Esc") | dim,
-									text(": clear   "),
-									text("q") | dim,
-									text(": quit"),
-								}) |
-								dim | hcenter;
-
-				return vbox({
-					filler(),
-					picker,
-					filler(),
-					hints,
-				});
+				return picker | hcenter | vcenter | flex;
 			}),
 		[&](Event event) {
 			if (event == Event::Character('q') || event == Event::CtrlC) {
