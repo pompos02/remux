@@ -18,17 +18,19 @@ using namespace ftxui;
 
 namespace {
 
-const Color kMatchFg = Color::RGB(230, 236, 245);
-const Color kMatchBg = Color::RGB(72, 93, 120);
-const Color kActiveIndicator = Color::RGB(123, 182, 148);
-const Color kUserColor = Color::RGB(197, 188, 164);
-const Color kHostColor = Color::RGB(146, 172, 204);
-const Color kSelectedRowBg = Color::RGB(41, 46, 56);
-constexpr int kAliasIdentityGap = 5;
+const Color kMatchFg = Color::RGB(242, 246, 252);
+const Color kMatchBg = Color::RGB(74, 104, 142);
+const Color kActiveIndicator = Color::RGB(92, 196, 132);
+const Color kUserColor = Color::RGB(201, 145, 60);
+const Color kHostColor = Color::RGB(52, 150, 198);
+const Color kSearchPromptColor = Color::RGB(72, 118, 198);
+const Color kSelectedRowBg = Color::RGB(62, 69, 82);
+const Color kSelectedRowFg = Color::RGB(236, 241, 248);
+constexpr int kAliasIdentityGap = 10;
 constexpr int kMaxVisibleRows = 10;
 
 std::vector<HostMatch> FilterHostMatches(const std::vector<Host> &hosts,
-									 const std::string &query) {
+										 const std::string &query) {
 	return RankHosts(hosts, query);
 }
 
@@ -55,10 +57,11 @@ int ComputePickerWidth(const std::vector<Host> &hosts, int alias_column_width) {
 		const int host_width =
 			static_cast<int>(host.hostname.empty() ? 1 : host.hostname.size());
 
-		const int row_content_width =
-			1 + alias_column_width + kAliasIdentityGap + user_width + 1 +
-			host_width + 1;
-		max_row_content_width = std::max(max_row_content_width, row_content_width);
+		const int row_content_width = 1 + alias_column_width +
+									  kAliasIdentityGap + user_width + 1 +
+									  host_width + 1;
+		max_row_content_width =
+			std::max(max_row_content_width, row_content_width);
 	}
 
 	const int picker_width = max_row_content_width + 2;
@@ -100,7 +103,7 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 			placeholder_width - static_cast<int>(placeholder_visible.size());
 
 		Elements parts = {
-			text("|") | dim,
+			text(" ") | focusCursorBlock,
 			text(placeholder_visible) | dim,
 		};
 		if (trailing_space_count > 0) {
@@ -111,12 +114,10 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 
 	const int safe_cursor =
 		std::max(0, std::min(cursor_position, static_cast<int>(query.size())));
-	const int window_start =
-		std::max(0, std::min(safe_cursor - width + 1,
-							 static_cast<int>(query.size())));
-	const int visible_len =
-		std::min(std::max(0, width - 1),
-				 static_cast<int>(query.size()) - window_start);
+	const int window_start = std::max(
+		0, std::min(safe_cursor - width + 1, static_cast<int>(query.size())));
+	const int visible_len = std::min(
+		std::max(0, width - 1), static_cast<int>(query.size()) - window_start);
 	const std::string visible =
 		query.substr(window_start, static_cast<size_t>(visible_len));
 	const int cursor_in_visible = safe_cursor - window_start;
@@ -131,7 +132,7 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 	const int trailing_space_count = width - visible_len - 1;
 
 	parts.push_back(text(left));
-	parts.push_back(text("|") | dim);
+	parts.push_back(text(" ") | focusCursorBlock);
 	parts.push_back(text(right));
 	if (trailing_space_count > 0) {
 		parts.push_back(text(std::string(trailing_space_count, ' ')));
@@ -195,19 +196,20 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 				ClampSelection(selected,
 							   static_cast<int>(visible_matches.size()));
 				AdjustScrollOffset(scroll_offset, selected,
-							   static_cast<int>(visible_matches.size()),
-							   kMaxVisibleRows);
+								   static_cast<int>(visible_matches.size()),
+								   kMaxVisibleRows);
 
 				Elements rows;
 				rows.reserve(kMaxVisibleRows);
 
 				const int window_start = scroll_offset;
-				const int window_end = std::min(
-					window_start + kMaxVisibleRows,
-					static_cast<int>(visible_matches.size()));
+				const int window_end =
+					std::min(window_start + kMaxVisibleRows,
+							 static_cast<int>(visible_matches.size()));
 
 				for (int i = window_start; i < window_end; ++i) {
-					const HostMatch &match = visible_matches[static_cast<size_t>(i)];
+					const HostMatch &match =
+						visible_matches[static_cast<size_t>(i)];
 					const Host &host = hosts[match.index];
 					const bool is_selected = i == selected;
 
@@ -215,10 +217,11 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 						host.isActive
 							? (text("*") | bold | color(kActiveIndicator))
 							: text("");
-					auto alias = hbox({
-						RenderAliasWithMatches(host.alias, match.positions),
-						indicator,
-					}) |
+					auto alias =
+						hbox({
+							RenderAliasWithMatches(host.alias, match.positions),
+							indicator,
+						}) |
 						size(WIDTH, EQUAL, alias_column_width);
 
 					const std::string user =
@@ -228,19 +231,19 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 
 					auto identity = hbox({
 						text(user) | color(kUserColor),
-						text("@") | dim,
+						text("@"),
 						text(hostname) | color(kHostColor),
 					});
 					Element row = hbox({
-								  text(" "),
-								  alias,
-								  text(std::string(kAliasIdentityGap, ' ')),
-								  identity,
-								  text(" "),
-							  }) |
-							  xflex;
+									  text(" "),
+									  alias,
+									  text(std::string(kAliasIdentityGap, ' ')),
+									  identity,
+									  text(" "),
+								  }) |
+								  xflex;
 					if (is_selected) {
-						row = row | bgcolor(kSelectedRowBg);
+						row = row | bgcolor(kSelectedRowBg) | color(kSelectedRowFg);
 					}
 					rows.push_back(row);
 				}
@@ -254,19 +257,20 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					std::to_string(hosts.size()) + "]";
 				const int search_query_width =
 					std::max(1, picker_width - 3 -
-							 static_cast<int>(result_counter.size()));
+									static_cast<int>(result_counter.size()));
 
 				Element picker =
 					vbox({
-						hbox({
-							text("> ") | dim,
-							RenderSearchQuery(query, input_cursor_position,
+							hbox({
+								text("> ") | color(kSearchPromptColor),
+								RenderSearchQuery(query, input_cursor_position,
 											  input_option.placeholder(),
 											  search_query_width),
-							text(" "),
-							text(result_counter) | dim,
-						}),
-						vbox(std::move(rows)) | size(HEIGHT, EQUAL, kMaxVisibleRows) |
+								text(" "),
+								text(result_counter) | dim,
+							}),
+						vbox(std::move(rows)) |
+							size(HEIGHT, EQUAL, kMaxVisibleRows) |
 							borderRounded,
 					}) |
 					size(WIDTH, EQUAL, picker_width) | hcenter;
