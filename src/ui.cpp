@@ -18,6 +18,13 @@ using namespace ftxui;
 
 namespace {
 
+const Color kMatchFg = Color::RGB(230, 236, 245);
+const Color kMatchBg = Color::RGB(72, 93, 120);
+const Color kActiveIndicator = Color::RGB(123, 182, 148);
+const Color kUserColor = Color::RGB(197, 188, 164);
+const Color kHostColor = Color::RGB(146, 172, 204);
+const Color kSelectedRowBg = Color::RGB(41, 46, 56);
+
 std::vector<HostMatch> FilterHostMatches(const std::vector<Host> &hosts,
 										 const std::string &query) {
 	return RankHosts(hosts, query);
@@ -36,12 +43,34 @@ Element RenderAliasWithMatches(const std::string &alias,
 	for (size_t i = 0; i < alias.size(); ++i) {
 		Element ch = text(std::string(1, alias[i]));
 		if (matched.count(static_cast<int>(i)) > 0) {
-			ch = ch | bold | color(Color::Cyan);
+			ch = ch | bold | color(kMatchFg) | bgcolor(kMatchBg);
 		}
 		letters.push_back(ch);
 	}
 
 	return hbox(std::move(letters));
+}
+
+Element RenderSearchQuery(const std::string &query, int cursor_position,
+						  const std::string &placeholder) {
+	if (query.empty()) {
+		return hbox({text(" ") | underlined, text(placeholder) | dim});
+	}
+
+	const int safe_cursor =
+		std::max(0, std::min(cursor_position, static_cast<int>(query.size())));
+	const std::string left = query.substr(0, safe_cursor);
+	const std::string right = query.substr(safe_cursor);
+
+	if (right.empty()) {
+		return hbox({text(left), text(" ") | underlined});
+	}
+
+	return hbox({
+		text(left),
+		text(std::string(1, right.front())) | underlined,
+		text(right.substr(1)),
+	});
 }
 
 void ClampSelection(int &selected, int max_count) {
@@ -57,11 +86,14 @@ void ClampSelection(int &selected, int max_count) {
 
 int RunHostPickerUI(std::vector<Host> &hosts) {
 	std::string query;
+	int input_cursor_position = 0;
 	int selected = 0;
 	std::vector<HostMatch> visible_matches = FilterHostMatches(hosts, query);
 
 	InputOption input_option;
 	input_option.placeholder = "Search hosts...";
+	input_option.cursor_position = &input_cursor_position;
+	input_option.multiline = false;
 	Component input = Input(&query, input_option);
 
 	auto screen = ScreenInteractive::TerminalOutput();
@@ -82,40 +114,79 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					const Host &host = hosts[match.index];
 					const bool is_selected = static_cast<int>(i) == selected;
 
-					auto indicator = text(host.isActive ? "[A] " : "[ ] ");
+					auto indicator =
+						host.isActive
+							? (text("*") | bold | color(kActiveIndicator))
+							: text(" ");
 					auto alias =
-						RenderAliasWithMatches(host.alias, match.positions);
-					auto hostname =
-						text(host.hostname.empty() ? ""
-												   : "  " + host.hostname) |
-						dim;
-					auto score =
-						query.empty()
-							? text("")
-							: (text("  [" + std::to_string(match.score) + "]") |
-							   dim);
+						RenderAliasWithMatches(host.alias, match.positions) |
+						xflex;
 
-					Element row = hbox({indicator, alias, hostname, score});
+					const std::string user =
+						host.user.empty() ? "-" : host.user;
+					const std::string hostname =
+						host.hostname.empty() ? "-" : host.hostname;
+
+					auto identity = hbox({
+						text(user) | color(kUserColor),
+						text("@") | dim,
+						text(hostname) | color(kHostColor),
+					});
+					Element row = hbox({
+									  text(" "),
+									  alias,
+									  indicator,
+									  text("  "),
+									  identity,
+									  text(" "),
+								  }) |
+								  xflex;
 					if (is_selected) {
-						row = row | inverted;
+						row = row | bgcolor(kSelectedRowBg);
 					}
 					rows.push_back(row);
 				}
 
 				if (rows.empty()) {
-					rows.push_back(text("No hosts available") | dim);
+					rows.push_back(hbox({text(" No hosts available ") | dim}));
 				}
 
+				Element picker =
+					vbox({
+						vbox({
+							hbox({
+								text(" "),
+								// text("Search ") | dim,
+								RenderSearchQuery(query, input_cursor_position,
+												  input_option.placeholder()) |
+									xflex,
+								text(" "),
+							}),
+							separator() | dim,
+						}),
+						text(""),
+						vbox(std::move(rows)) | borderRounded,
+					}) |
+					size(WIDTH, LESS_THAN, 96) | hcenter;
+
+				Element hints = hbox({
+									text("Enter") | dim,
+									text(": connect   "),
+									text("Up/Down") | dim,
+									text(": navigate   "),
+									text("Esc") | dim,
+									text(": clear   "),
+									text("q") | dim,
+									text(": quit"),
+								}) |
+								dim | hcenter;
+
 				return vbox({
-						   hbox({text("> "), input->Render()}),
-						   separator(),
-						   text("Enter: connect   Up/Down: navigate   Esc: "
-								"clear   q: quit") |
-							   dim,
-						   separator(),
-						   vbox(std::move(rows)),
-					   }) |
-					   border;
+					filler(),
+					picker,
+					filler(),
+					hints,
+				});
 			}),
 		[&](Event event) {
 			if (event == Event::Character('q') || event == Event::CtrlC) {
@@ -125,6 +196,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 
 			if (event == Event::Escape) {
 				query.clear();
+				input_cursor_position = 0;
 				selected = 0;
 				return true;
 			}
