@@ -18,8 +18,8 @@ using namespace ftxui;
 
 namespace {
 
-const Color kMatchFg = Color::RGB(242, 246, 252);
-const Color kMatchBg = Color::RGB(74, 104, 142);
+const Color kMatchFg = Color::RGB(10, 25, 45);
+const Color kMatchBg = Color::RGB(121, 192, 255);
 const Color kActiveIndicator = Color::RGB(92, 196, 132);
 const Color kUserColor = Color::RGB(201, 145, 60);
 const Color kHostColor = Color::RGB(52, 150, 198);
@@ -90,21 +90,16 @@ Element RenderAliasWithMatches(const std::string &alias,
 }
 
 Element RenderSearchQuery(const std::string &query, int cursor_position,
-						  const std::string &placeholder, int width) {
+						  int width) {
 	if (width <= 0) {
 		return text("");
 	}
 
 	if (query.empty()) {
-		const int placeholder_width = std::max(0, width - 1);
-		const std::string placeholder_visible =
-			placeholder.substr(0, static_cast<size_t>(placeholder_width));
-		const int trailing_space_count =
-			placeholder_width - static_cast<int>(placeholder_visible.size());
+		const int trailing_space_count = std::max(0, width - 1);
 
 		Elements parts = {
 			text(" ") | focusCursorBlock,
-			text(placeholder_visible) | dim,
 		};
 		if (trailing_space_count > 0) {
 			parts.push_back(text(std::string(trailing_space_count, ' ')));
@@ -181,7 +176,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 	const int max_picker_height = kMaxVisibleRows + 3;
 
 	InputOption input_option;
-	input_option.placeholder = "Search hosts...";
+	input_option.placeholder = "";
 	input_option.cursor_position = &input_cursor_position;
 	input_option.multiline = false;
 	Component input = Input(&query, input_option);
@@ -264,7 +259,6 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 							hbox({
 								text("> ") | color(kSearchPromptColor),
 								RenderSearchQuery(query, input_cursor_position,
-											  input_option.placeholder(),
 											  search_query_width),
 								text(" "),
 								text(result_counter) | dim,
