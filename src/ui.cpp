@@ -29,6 +29,8 @@ const Color kActiveIndicator = Color::RGB(92, 196, 132);
 const Color kUserColor = Color::RGB(201, 145, 60);
 const Color kHostColor = Color::RGB(52, 150, 198);
 const Color kSearchPromptColor = Color::RGB(72, 118, 198);
+const Color kSearchCursorBg = Color::RGB(210, 221, 238);
+const Color kSearchCursorFg = Color::RGB(25, 31, 40);
 const Color kSelectedRowBg = Color::RGB(62, 69, 82);
 const Color kSelectedRowFg = Color::RGB(236, 241, 248);
 const Color kCopiedRowBg = Color::RGB(52, 140, 86);
@@ -105,7 +107,7 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 		const int trailing_space_count = std::max(0, width - 1);
 
 		Elements parts = {
-			text(" ") | focusCursorBlock,
+			text(" ") | color(kSearchCursorFg) | bgcolor(kSearchCursorBg),
 		};
 		if (trailing_space_count > 0) {
 			parts.push_back(text(std::string(trailing_space_count, ' ')));
@@ -133,7 +135,7 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 	const int trailing_space_count = width - visible_len - 1;
 
 	parts.push_back(text(left));
-	parts.push_back(text(" ") | focusCursorBlock);
+	parts.push_back(text(" ") | color(kSearchCursorFg) | bgcolor(kSearchCursorBg));
 	parts.push_back(text(right));
 	if (trailing_space_count > 0) {
 		parts.push_back(text(std::string(trailing_space_count, ' ')));
