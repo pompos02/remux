@@ -145,6 +145,18 @@ Element RenderSearchQuery(const std::string &query, int cursor_position,
 	return hbox(std::move(parts));
 }
 
+Element RenderInlineEditableQuery(const std::string &query, int cursor_position) {
+	const int safe_cursor =
+		std::max(0, std::min(cursor_position, static_cast<int>(query.size())));
+
+	Elements parts;
+	parts.push_back(text(query.substr(0, static_cast<size_t>(safe_cursor))));
+	parts.push_back(text(" ") | color(kSearchCursorFg) | bgcolor(kSearchCursorBg));
+	parts.push_back(text(query.substr(static_cast<size_t>(safe_cursor))));
+
+	return hbox(std::move(parts));
+}
+
 void ClampSelection(int &selected, int max_count) {
 	if (max_count <= 0) {
 		selected = 0;
@@ -291,32 +303,25 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 					const Host &host = hosts[custom_user_host_index];
 					const std::string hostname =
 						host.hostname.empty() ? "-" : host.hostname;
-					const int user_query_width =
-						std::max(1, picker_width - 4 -
-								 static_cast<int>(hostname.size()));
 
 					picker =
-						vbox({
-							hbox({
-								text("> ") | color(kSearchPromptColor),
-								RenderSearchQuery(custom_user,
-												  custom_user_cursor_position,
-												  user_query_width) |
-									color(kUserColor),
-								text("@"),
-								text(hostname) | color(kHostColor),
-							}),
-							vbox({
-								filler(),
-								hcenter(text("Press Enter to connect") | dim),
-								hcenter(text("Esc to cancel") | dim),
-								filler(),
-							}) |
-								size(HEIGHT, EQUAL, kMaxVisibleRows) |
-								borderRounded,
+						hbox({
+							text("> ") | color(kSearchPromptColor),
+							RenderInlineEditableQuery(custom_user,
+												 custom_user_cursor_position) |
+								color(kUserColor),
+							text("@"),
+							text(hostname) | color(kHostColor),
 						}) |
 						size(WIDTH, EQUAL, picker_width) | hcenter;
 				} else {
+					Element host_list =
+						vbox({
+							separator(),
+							vbox(std::move(rows)) |
+								size(HEIGHT, EQUAL, kMaxVisibleRows),
+						});
+
 					picker =
 						vbox({
 							hbox({
@@ -326,9 +331,7 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 								text(" "),
 								text(result_counter) | dim,
 							}),
-							vbox(std::move(rows)) |
-								size(HEIGHT, EQUAL, kMaxVisibleRows) |
-								borderRounded,
+							host_list,
 						}) |
 						size(WIDTH, EQUAL, picker_width) | hcenter;
 				}
@@ -401,9 +404,8 @@ int RunHostPickerUI(std::vector<Host> &hosts) {
 			if (event == Event::CtrlX) {
 				if (!prompting_custom_user && !visible_matches.empty()) {
 					custom_user_host_index = visible_matches[selected].index;
-					custom_user = hosts[custom_user_host_index].user;
-					custom_user_cursor_position =
-						static_cast<int>(custom_user.size());
+					custom_user.clear();
+					custom_user_cursor_position = 0;
 					prompting_custom_user = true;
 					active_input_tab = 1;
 				}
